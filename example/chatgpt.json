@@ -1,0 +1,46 @@
+{
+  "segments": [
+    {
+      "id": "seg-001",
+      "text": "Hello and welcome back to the show. You're listening to a short tech podcast where we talk about ideas, experiments, and tools people are building right now.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-002",
+      "text": "Exactly. And today we want to talk about something a bit different. An app that can automatically generate podcasts using AI voices.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-003",
+      "text": "This kind of setup changes how content is created. You don't need a studio, microphones, or editing software anymore.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-004",
+      "text": "You just focus on the structure and the message. The system takes care of the voice, pacing, and delivery.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-005",
+      "text": "And what's interesting is that it still feels personal. With the right voices and timing, it sounds like a real conversation.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-006",
+      "text": "We’re already seeing this used for daily briefings, internal company updates, and even personalized podcasts for users.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-007",
+      "text": "So if you're building tools, experimenting with audio, or just curious about where media is going, this is definitely something to watch.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-008",
+      "text": "Thanks for listening. This was a quick episode, but we'll be back soon with more experiments and ideas.",
+      "voice": "de-Spk0_man"
+    }
+  ],
+  "createdAt": "2025-12-14T16:02:00.000Z",
+  "version": "1.0.0"
+}
