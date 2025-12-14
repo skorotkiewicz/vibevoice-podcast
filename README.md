@@ -13,6 +13,8 @@ Create multi-voice podcasts with AI text-to-speech. Add segments, assign differe
 ---
 ## Demo
 
+![alt text](example/screenshot.png "Screenshot")
+
 [example/podcast-1765731548214.wav](example/podcast-1765731548214.wav)
 
 
