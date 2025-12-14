@@ -14,7 +14,7 @@ Create multi-voice podcasts with AI text-to-speech. Add segments, assign differe
 ## Demo
 
 <video controls width="300" height="50">
-  <source src="example/podcast-1765731548214.wav" type="audio/mpeg">
+  <source src="example/podcast-1765731548214.wav" type="audio/wav">
 </video>
 
 ## Prerequisites
