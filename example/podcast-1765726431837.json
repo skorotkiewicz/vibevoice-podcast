@@ -1,0 +1,31 @@
+{
+	"segments": [
+		{
+			"id": "1a2b3c01-1111-4aaa-8bbb-000000000001",
+			"text": "Hey everyone, and welcome to the podcast. This is a short, experimental show generated entirely by AI.",
+			"voice": "en-Emma_woman"
+		},
+		{
+			"id": "1a2b3c02-2222-4bbb-8ccc-000000000002",
+			"text": "Today we're talking about building apps that create content automatically, from podcasts to audio stories.",
+			"voice": "en-Frank_man"
+		},
+		{
+			"id": "1a2b3c03-3333-4ccc-8ddd-000000000003",
+			"text": "The idea is simple. You write the structure, the AI brings the voice, and suddenly you have a podcast in seconds.",
+			"voice": "en-Emma_woman"
+		},
+		{
+			"id": "1a2b3c04-4444-4ddd-8eee-000000000004",
+			"text": "Solche Technologien zeigen, wie schnell sich Medien gerade verändern. Jeder kann heute zum Podcaster werden.",
+			"voice": "de-Spk0_man"
+		},
+		{
+			"id": "1a2b3c05-5555-4eee-8fff-000000000005",
+			"text": "Thanks for listening. This was a short demo, but the possibilities are endless. See you in the next episode.",
+			"voice": "en-Emma_woman"
+		}
+	],
+	"createdAt": "2025-12-14T15:33:51.836Z",
+	"version": "1.0.0"
+}

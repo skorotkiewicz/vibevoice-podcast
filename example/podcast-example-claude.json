@@ -1,0 +1,66 @@
+{
+	"segments": [
+		{
+			"id": "intro-1",
+			"text": "Hey everyone! Welcome to Tech and Coffee, the podcast where we blend the latest in technology with casual conversation.",
+			"voice": "en-Emma_woman"
+		},
+		{
+			"id": "intro-2",
+			"text": "I'm so excited to be here! Today we're diving into something really cool - the rise of AI voice technology.",
+			"voice": "en-Mike_man"
+		},
+		{
+			"id": "topic-intro",
+			"text": "You know, it's fascinating how far voice synthesis has come. Just a few years ago, AI voices sounded robotic and unnatural.",
+			"voice": "en-Emma_woman"
+		},
+		{
+			"id": "topic-response-1",
+			"text": "Absolutely! Now they're so realistic that you can barely tell the difference. I mean, we're literally having this conversation using AI voices right now!",
+			"voice": "en-Mike_man"
+		},
+		{
+			"id": "topic-deep-1",
+			"text": "Right? And what's really exciting is how accessible this technology has become. Anyone can create podcasts, audiobooks, or voice assistants now.",
+			"voice": "en-Emma_woman"
+		},
+		{
+			"id": "topic-response-2",
+			"text": "The applications are endless. Think about language learning, accessibility for people with speech disabilities, or even preserving the voices of loved ones.",
+			"voice": "en-Mike_man"
+		},
+		{
+			"id": "ethics-1",
+			"text": "Though we should talk about the ethical considerations too. With great power comes great responsibility, as they say.",
+			"voice": "en-Emma_woman"
+		},
+		{
+			"id": "ethics-2",
+			"text": "For sure. Things like deepfakes and voice cloning without consent are real concerns we need to address as this technology evolves.",
+			"voice": "en-Mike_man"
+		},
+		{
+			"id": "positive-spin",
+			"text": "True, but I'm optimistic. With proper guidelines and awareness, I think we can harness this technology for amazing things.",
+			"voice": "en-Emma_woman"
+		},
+		{
+			"id": "closing-1",
+			"text": "Couldn't agree more. Well, that's all we have time for today. Thanks for tuning in to Tech and Coffee!",
+			"voice": "en-Mike_man"
+		},
+		{
+			"id": "closing-2",
+			"text": "Don't forget to subscribe and leave us a review. Until next time, keep innovating!",
+			"voice": "en-Emma_woman"
+		},
+		{
+			"id": "outro",
+			"text": "Bye everyone!",
+			"voice": "en-Mike_man"
+		}
+	],
+	"createdAt": "2025-12-14T15:45:00.000Z",
+	"version": "1.0.0"
+}
