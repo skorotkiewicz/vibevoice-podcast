@@ -1,73 +1,99 @@
-# React + TypeScript + Vite
+# 🎙️ Podcast Maker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Create multi-voice podcasts with AI text-to-speech. Add segments, assign different voices to each, preview in real-time, and export as audio.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Multi-segment editing** — Add unlimited text segments
+- **Per-segment voices** — Assign different voices to each segment
+- **Real-time preview** — Play individual segments or the entire podcast
+- **Audio export** — Download your podcast as a single WAV file
+- **Project management** — Export/Import podcasts as JSON
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Prerequisites
 
-## Expanding the ESLint configuration
+### 1. Clone VibeVoice
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/microsoft/VibeVoice
+cd VibeVoice
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Start the API Server
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Copy the server script to your VibeVoice directory:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp example/server.py /path/to/VibeVoice/demo/server.py
 ```
+
+Run the server:
+
+```bash
+cd /path/to/VibeVoice
+python demo/server.py --model microsoft/VibeVoice-Realtime-0.5B --device cuda --port 8880
+```
+
+The server will start at `http://localhost:8880`.
+
+---
+
+## Running the Frontend
+
+```bash
+# Install dependencies
+bun install   # or npm install
+
+# Start development server
+bun dev       # or npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
+
+## Usage
+
+### Creating a Podcast
+
+1. **Add segments** — Click "Add Segment" to create new text entries
+2. **Write content** — Enter text for each segment
+3. **Select voices** — Choose a voice from the dropdown for each segment
+4. **Preview** — Click "Play" on individual segments or "Play Podcast" for all
+
+### Exporting
+
+- **JSON** — Save your project with "Export JSON" to continue editing later
+- **Audio** — Click "Download Audio" to generate a WAV file of the complete podcast
+
+### Importing
+
+Click "Import" and select a previously saved JSON file to restore your project.
+
+---
+
+## Example Podcasts
+
+Check the `example/` folder for sample podcast JSON files you can import.
+
+---
+
+## Configuration
+
+The frontend connects to the API at `http://localhost:8880/api`. To change this, edit the `API_BASE` constant in `src/App.tsx`.
+
+---
+
+## Tech Stack
+
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS
+- **Backend**: FastAPI + VibeVoice TTS
+- **Audio**: WebSocket streaming with real-time PCM playback
+
+---
+
+## License
+
+MIT
