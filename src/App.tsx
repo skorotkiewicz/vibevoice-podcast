@@ -1,5 +1,6 @@
 import {
 	Download,
+	FileAudio,
 	GripVertical,
 	Loader2,
 	Mic,
@@ -15,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useVibeVoice } from "@/hooks/useVibeVoice";
 
 const API_BASE = "http://localhost:8880/api";
+const SAMPLE_RATE = 24_000;
 
 interface ConfigResponse {
 	voices: string[];
@@ -54,6 +56,134 @@ const languageNames: Record<string, string> = {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Generate audio for a single segment via WebSocket
+ * Returns PCM16 audio data as Int16Array
+ */
+async function generateSegmentAudio(
+	text: string,
+	voice: string,
+	onProgress?: (message: string) => void,
+): Promise<Int16Array> {
+	return new Promise((resolve, reject) => {
+		const chunks: ArrayBuffer[] = [];
+
+		const baseUrl = API_BASE.replace(/^http/, "ws");
+		const wsUrl = new URL(`${baseUrl}/stream`);
+		wsUrl.searchParams.set("text", text);
+		wsUrl.searchParams.set("voice", voice);
+		wsUrl.searchParams.set("cfg", "1.5");
+		wsUrl.searchParams.set("steps", "5");
+
+		const ws = new WebSocket(wsUrl.toString());
+
+		ws.onopen = () => {
+			onProgress?.("Generating...");
+		};
+
+		ws.onmessage = (event) => {
+			if (event.data instanceof Blob) {
+				event.data.arrayBuffer().then((buffer) => {
+					chunks.push(buffer);
+				});
+			} else if (typeof event.data === "string") {
+				try {
+					const message = JSON.parse(event.data);
+					if (message.event === "model_progress" && message.data) {
+						onProgress?.(
+							`${message.data.generated_sec?.toFixed(1)}s generated`,
+						);
+					}
+				} catch {
+					// Ignore parse errors
+				}
+			}
+		};
+
+		ws.onerror = () => {
+			reject(new Error("WebSocket connection error"));
+		};
+
+		ws.onclose = (event) => {
+			if (event.code === 1013) {
+				reject(new Error("Server is busy"));
+				return;
+			}
+
+			// Combine all chunks into a single Int16Array
+			const totalLength = chunks.reduce(
+				(acc, chunk) => acc + chunk.byteLength,
+				0,
+			);
+			const combined = new Int16Array(totalLength / 2);
+			let offset = 0;
+
+			for (const chunk of chunks) {
+				const int16 = new Int16Array(chunk);
+				combined.set(int16, offset);
+				offset += int16.length;
+			}
+
+			resolve(combined);
+		};
+	});
+}
+
+/**
+ * Create WAV file from PCM16 data
+ */
+function createWavFile(samples: Int16Array, sampleRate: number): Blob {
+	const numChannels = 1;
+	const bitsPerSample = 16;
+	const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+	const blockAlign = numChannels * (bitsPerSample / 8);
+	const dataSize = samples.length * (bitsPerSample / 8);
+	const headerSize = 44;
+	const fileSize = headerSize + dataSize;
+
+	const buffer = new ArrayBuffer(fileSize);
+	const view = new DataView(buffer);
+
+	// RIFF header
+	writeString(view, 0, "RIFF");
+	view.setUint32(4, fileSize - 8, true);
+	writeString(view, 8, "WAVE");
+
+	// fmt chunk
+	writeString(view, 12, "fmt ");
+	view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+	view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+	view.setUint16(22, numChannels, true);
+	view.setUint32(24, sampleRate, true);
+	view.setUint32(28, byteRate, true);
+	view.setUint16(32, blockAlign, true);
+	view.setUint16(34, bitsPerSample, true);
+
+	// data chunk
+	writeString(view, 36, "data");
+	view.setUint32(40, dataSize, true);
+
+	// Write samples
+	const dataView = new Int16Array(buffer, headerSize);
+	dataView.set(samples);
+
+	return new Blob([buffer], { type: "audio/wav" });
+}
+
+function writeString(view: DataView, offset: number, str: string) {
+	for (let i = 0; i < str.length; i++) {
+		view.setUint8(offset + i, str.charCodeAt(i));
+	}
+}
+
+/**
+ * Add silence between segments (in samples)
+ */
+function createSilence(durationMs: number): Int16Array {
+	const numSamples = Math.floor((durationMs / 1000) * SAMPLE_RATE);
+	return new Int16Array(numSamples);
+}
+
+/**
  * Podcast Maker - Create multi-voice podcasts with TTS
  */
 export function PodcastMaker() {
@@ -70,9 +200,12 @@ export function PodcastMaker() {
 	const [playingSegmentId, setPlayingSegmentId] = useState<string | null>(null);
 	const [isPlayingAll, setIsPlayingAll] = useState(false);
 	const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number>(-1);
+	const [isExporting, setIsExporting] = useState(false);
+	const [exportProgress, setExportProgress] = useState<string>("");
 
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const stopPlayAllRef = useRef(false);
+	const stopExportRef = useRef(false);
 	const segmentPlayFunctionsRef = useRef<Map<string, () => Promise<void>>>(
 		new Map(),
 	);
@@ -141,7 +274,7 @@ export function PodcastMaker() {
 		);
 	};
 
-	const exportPodcast = () => {
+	const exportPodcastJson = () => {
 		const data: PodcastData = {
 			segments,
 			createdAt: new Date().toISOString(),
@@ -240,6 +373,98 @@ export function PodcastMaker() {
 		setPlayingSegmentId(null);
 	};
 
+	// Export podcast as audio file
+	const handleExportAudio = async () => {
+		const validSegments = segments.filter((s) => s.text.trim());
+		if (validSegments.length === 0) {
+			alert("No segments with text to export");
+			return;
+		}
+
+		setIsExporting(true);
+		stopExportRef.current = false;
+
+		const audioChunks: Int16Array[] = [];
+		const silenceBetweenSegments = createSilence(500); // 500ms silence between segments
+
+		try {
+			for (let i = 0; i < validSegments.length; i++) {
+				if (stopExportRef.current) {
+					setIsExporting(false);
+					setExportProgress("");
+					return;
+				}
+
+				const segment = validSegments[i];
+				setExportProgress(
+					`Generating segment ${i + 1}/${validSegments.length}...`,
+				);
+
+				const audio = await generateSegmentAudio(
+					segment.text,
+					segment.voice,
+					(msg) =>
+						setExportProgress(
+							`Segment ${i + 1}/${validSegments.length}: ${msg}`,
+						),
+				);
+
+				audioChunks.push(audio);
+
+				// Add silence between segments (but not after the last one)
+				if (i < validSegments.length - 1) {
+					audioChunks.push(silenceBetweenSegments);
+				}
+
+				// Wait a bit before next segment
+				if (i < validSegments.length - 1) {
+					await delay(500);
+				}
+			}
+
+			setExportProgress("Creating audio file...");
+
+			// Combine all audio chunks
+			const totalLength = audioChunks.reduce(
+				(acc, chunk) => acc + chunk.length,
+				0,
+			);
+			const combined = new Int16Array(totalLength);
+			let offset = 0;
+
+			for (const chunk of audioChunks) {
+				combined.set(chunk, offset);
+				offset += chunk.length;
+			}
+
+			// Create WAV file and download
+			const wavBlob = createWavFile(combined, SAMPLE_RATE);
+			const url = URL.createObjectURL(wavBlob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `podcast-${Date.now()}.wav`;
+			a.click();
+			URL.revokeObjectURL(url);
+
+			setExportProgress("Done!");
+			await delay(1000);
+		} catch (err) {
+			console.error("Failed to export audio:", err);
+			alert(
+				`Failed to export audio: ${err instanceof Error ? err.message : "Unknown error"}`,
+			);
+		}
+
+		setIsExporting(false);
+		setExportProgress("");
+	};
+
+	const handleCancelExport = () => {
+		stopExportRef.current = true;
+	};
+
+	const isBusy = isPlayingAll || isExporting;
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
 			{/* Animated background orbs */}
@@ -271,7 +496,7 @@ export function PodcastMaker() {
 						<button
 							type="button"
 							onClick={addSegment}
-							disabled={isPlayingAll}
+							disabled={isBusy}
 							className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-slate-700 disabled:to-slate-700 text-white disabled:text-slate-400 rounded-xl font-medium transition-all duration-300 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 hover:scale-105 disabled:shadow-none disabled:scale-100 disabled:cursor-not-allowed"
 						>
 							<Plus className="w-5 h-5" />
@@ -286,16 +511,16 @@ export function PodcastMaker() {
 					<div className="flex items-center gap-2">
 						<button
 							type="button"
-							onClick={exportPodcast}
-							disabled={isPlayingAll}
+							onClick={exportPodcastJson}
+							disabled={isBusy}
 							className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 text-slate-300 hover:text-white disabled:text-slate-600 rounded-xl font-medium transition-all duration-300 border border-slate-700 hover:border-slate-600 disabled:border-slate-800 disabled:cursor-not-allowed"
 						>
 							<Download className="w-4 h-4" />
-							Export
+							Export JSON
 						</button>
 
 						<label
-							className={`flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl font-medium transition-all duration-300 cursor-pointer border border-slate-700 hover:border-slate-600 ${isPlayingAll ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
+							className={`flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl font-medium transition-all duration-300 cursor-pointer border border-slate-700 hover:border-slate-600 ${isBusy ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
 						>
 							<Upload className="w-4 h-4" />
 							Import
@@ -304,12 +529,34 @@ export function PodcastMaker() {
 								type="file"
 								accept=".json"
 								onChange={importPodcast}
-								disabled={isPlayingAll}
+								disabled={isBusy}
 								className="hidden"
 							/>
 						</label>
 					</div>
 				</div>
+
+				{/* Export Progress Banner */}
+				{isExporting && (
+					<div className="mb-6 p-4 bg-gradient-to-r from-blue-900/50 to-purple-900/50 backdrop-blur-xl rounded-2xl border border-blue-500/30">
+						<div className="flex items-center justify-between gap-4">
+							<div className="flex items-center gap-3">
+								<Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+								<div>
+									<p className="text-white font-medium">Exporting Audio</p>
+									<p className="text-blue-300 text-sm">{exportProgress}</p>
+								</div>
+							</div>
+							<button
+								type="button"
+								onClick={handleCancelExport}
+								className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
+							>
+								Cancel
+							</button>
+						</div>
+					</div>
+				)}
 
 				{/* Segments */}
 				<div className="space-y-4 mb-8">
@@ -322,7 +569,7 @@ export function PodcastMaker() {
 							groupedVoices={groupedVoices}
 							isLoadingVoices={isLoadingVoices}
 							isPlaying={playingSegmentId === segment.id}
-							isPlayingAll={isPlayingAll}
+							isBusy={isBusy}
 							canDelete={segments.length > 1}
 							onUpdate={updateSegment}
 							onRemove={removeSegment}
@@ -350,26 +597,46 @@ export function PodcastMaker() {
 							</div>
 						</div>
 
-						{isPlayingAll ? (
-							<button
-								type="button"
-								onClick={handleStopAll}
-								className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-red-500/25"
-							>
-								<Square className="w-5 h-5" />
-								Stop Podcast
-							</button>
-						) : (
-							<button
-								type="button"
-								onClick={handlePlayAll}
-								disabled={segments.every((s) => !s.text.trim())}
-								className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-slate-700 disabled:to-slate-700 text-white disabled:text-slate-500 rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-green-500/25 disabled:shadow-none disabled:cursor-not-allowed"
-							>
-								<Play className="w-5 h-5" />
-								Play Podcast
-							</button>
-						)}
+						<div className="flex items-center gap-2">
+							{/* Download Audio Button */}
+							{!isPlayingAll && (
+								<button
+									type="button"
+									onClick={handleExportAudio}
+									disabled={
+										segments.every((s) => !s.text.trim()) || isExporting
+									}
+									className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 disabled:from-slate-700 disabled:to-slate-700 text-white disabled:text-slate-500 rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-blue-500/25 disabled:shadow-none disabled:cursor-not-allowed"
+								>
+									<FileAudio className="w-5 h-5" />
+									Download Audio
+								</button>
+							)}
+
+							{/* Play/Stop Button */}
+							{isPlayingAll ? (
+								<button
+									type="button"
+									onClick={handleStopAll}
+									className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-red-500/25"
+								>
+									<Square className="w-5 h-5" />
+									Stop Podcast
+								</button>
+							) : (
+								<button
+									type="button"
+									onClick={handlePlayAll}
+									disabled={
+										segments.every((s) => !s.text.trim()) || isExporting
+									}
+									className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-slate-700 disabled:to-slate-700 text-white disabled:text-slate-500 rounded-xl font-semibold transition-all duration-300 shadow-lg shadow-green-500/25 disabled:shadow-none disabled:cursor-not-allowed"
+								>
+									<Play className="w-5 h-5" />
+									Play Podcast
+								</button>
+							)}
+						</div>
 					</div>
 				</div>
 			</div>
@@ -387,7 +654,7 @@ function SegmentCard({
 	groupedVoices,
 	isLoadingVoices,
 	isPlaying,
-	isPlayingAll,
+	isBusy,
 	canDelete,
 	onUpdate,
 	onRemove,
@@ -401,7 +668,7 @@ function SegmentCard({
 	groupedVoices: Record<string, string[]>;
 	isLoadingVoices: boolean;
 	isPlaying: boolean;
-	isPlayingAll: boolean;
+	isBusy: boolean;
 	canDelete: boolean;
 	onUpdate: (id: string, field: keyof PodcastSegment, value: string) => void;
 	onRemove: (id: string) => void;
@@ -503,7 +770,7 @@ function SegmentCard({
 					<button
 						type="button"
 						onClick={() => onRemove(segment.id)}
-						disabled={isActive || isPlayingAll}
+						disabled={isActive || isBusy}
 						className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						<Trash2 className="w-4 h-4" />
@@ -520,7 +787,7 @@ function SegmentCard({
 					<select
 						value={segment.voice}
 						onChange={(e) => onUpdate(segment.id, "voice", e.target.value)}
-						disabled={isActive || isLoadingVoices || isPlayingAll}
+						disabled={isActive || isLoadingVoices || isBusy}
 						className="w-full px-3 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
 						style={{
 							backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
@@ -560,7 +827,7 @@ function SegmentCard({
 					<button
 						type="button"
 						onClick={handlePlay}
-						disabled={!segment.text.trim() || isPlayingAll}
+						disabled={!segment.text.trim() || isBusy}
 						className="mt-5 flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 text-white disabled:text-slate-600 rounded-xl font-medium transition-all duration-300 border border-slate-700 disabled:border-slate-800 disabled:cursor-not-allowed"
 					>
 						<Play className="w-4 h-4" />
@@ -578,14 +845,14 @@ function SegmentCard({
 					value={segment.text}
 					onChange={(e) => onUpdate(segment.id, "text", e.target.value)}
 					placeholder="Enter text for this segment..."
-					disabled={isActive || isPlayingAll}
+					disabled={isActive || isBusy}
 					rows={3}
 					className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm resize-none focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 				/>
 			</div>
 
 			{/* Error display */}
-			{error && !isPlayingAll && (
+			{error && !isBusy && (
 				<div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
 					<p className="text-red-300 text-sm">⚠️ {error}</p>
 				</div>
