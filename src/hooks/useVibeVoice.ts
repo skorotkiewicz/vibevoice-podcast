@@ -269,7 +269,7 @@ export function useVibeVoice(
             // JSON log message
             try {
               const message: LogMessage = JSON.parse(event.data);
-              console.log("[VibeVoice]", message.event, message.data);
+              //   console.log("[VibeVoice]", message.event, message.data);
 
               if (message.type === "error") {
                 setState((prev) => ({

@@ -6,6 +6,8 @@ Create multi-voice podcasts with AI text-to-speech. Add segments, assign differe
 
 - **Multi-segment editing** — Add unlimited text segments
 - **Per-segment voices** — Assign different voices to each segment
+- **Audio pre-generation** — Generate audio clips before playback for consistency
+- **Audio caching** — Generated clips are cached for instant replay
 - **Real-time preview** — Play individual segments or the entire podcast
 - **Audio export** — Download your podcast as a single WAV file
 - **Project management** — Export/Import podcasts as JSON
@@ -67,12 +69,32 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 1. **Add segments** — Click "Add Segment" to create new text entries
 2. **Write content** — Enter text for each segment
 3. **Select voices** — Choose a voice from the dropdown for each segment
-4. **Preview** — Click "Play" on individual segments or "Play Podcast" for all
+4. **Generate audio** — Click "Generate" on each segment to create the audio clip
+5. **Preview** — Click "Play" on individual segments or "Play Podcast" for all
+
+### Generating Audio
+
+Each segment has a **Generate** / **Regenerate** button:
+
+- **Generate** — Creates the audio clip for that segment (amber button)
+- **Regenerate** — Re-creates the audio if you want a different take
+- **Generate All** — Generates all missing audio clips at once
+- **Ready** — Green indicator shows the segment has cached audio
+
+> **Tip**: Pre-generating audio ensures consistent playback. Each time you generate, the audio is cached and will play the same way every time — no more "I feel lucky" randomness!
+
+### Playback
+
+- If a segment has cached audio, it plays instantly
+- If not cached, it will generate first, then play
+- The cache is invalidated when you change text or voice
 
 ### Exporting
 
 - **JSON** — Save your project with "Export JSON" to continue editing later
-- **Audio** — Click "Download Audio" to generate a WAV file of the complete podcast
+- **Audio** — Click "Download Audio" to export the complete podcast
+  - Uses cached audio where available (fast!)
+  - Generates missing segments automatically
 
 ### Importing
 
@@ -96,7 +118,7 @@ The frontend connects to the API at `http://localhost:8880/api`. To change this,
 
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS
 - **Backend**: FastAPI + VibeVoice TTS
-- **Audio**: WebSocket streaming with real-time PCM playback
+- **Audio**: REST API synthesis with client-side caching
 
 ---
 

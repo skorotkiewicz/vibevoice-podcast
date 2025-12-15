@@ -1,0 +1,586 @@
+{
+  "segments": [
+    {
+      "id": "seg-001",
+      "text": "Welcome back to 'Hellfire HR', the only podcast where we discuss the daily struggles of working in the underworld. I'm your host, Lucifero.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-002",
+      "text": "And I'm Beatrice, head of Eternal Complaints. Today's episode is a special extended edition because we have SO much to cover.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-003",
+      "text": "That's right! We've had a record number of complaints this week. Apparently, being damned for eternity isn't enough. People want better snacks too.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-004",
+      "text": "Let's start with the big one. The cafeteria is on fire again.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-005",
+      "text": "Again?! We just put out the last fire!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-006",
+      "text": "Lucifero, it's Hell. The cafeteria is ALWAYS on fire. That's not a bug, that's a feature.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-007",
+      "text": "Fair point. What's the complaint then?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-008",
+      "text": "Someone said the fire is 'not aesthetic enough.' They want it to be more... Instagram-worthy.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-009",
+      "text": "Instagram? We don't even have good Wi-Fi down here!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-010",
+      "text": "Speaking of which, IT called. The Wi-Fi password needs to change again.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-011",
+      "text": "What's wrong with the current one?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-012",
+      "text": "It's forty-seven characters. The demons keep forgetting it. We've had three mental breakdowns this week alone.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-013",
+      "text": "But 'TheEternalSufferingOfTheDamnedShallNeverCease666' is such a classic!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-014",
+      "text": "IT suggested 'password123'. They said it's 'ironic torture.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-015",
+      "text": "Brilliant! That's so stupid it's actually evil. I love it!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-016",
+      "text": "Okay, next topic. The interns are unionizing.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-017",
+      "text": "WHAT?! How can they unionize? They're here for eternity!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-018",
+      "text": "Apparently, someone read them the 'Rights of the Damned' pamphlet.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-019",
+      "text": "We have a 'Rights of the Damned' pamphlet?!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-020",
+      "text": "Legally required. Heaven made us add it in the treaty of 1347.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-021",
+      "text": "Ugh, Heaven. Always ruining everything with their 'basic decency' and 'fundamental rights.'",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-022",
+      "text": "The interns are demanding one lunch break per century.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-023",
+      "text": "Per CENTURY?! That's outrageous! What's next, bathroom breaks?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-024",
+      "text": "Actually, that's demand number two.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-025",
+      "text": "This is getting out of hand. Moving on! What's happening with Cerberus?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-026",
+      "text": "Oh, big news there! His left head has fully transitioned to veganism.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-027",
+      "text": "I still don't understand how a head of a hellhound goes vegan.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-028",
+      "text": "He watched a documentary. Something about the meat industry being 'inhumane.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-029",
+      "text": "We're in HELL! Inhumane is our brand!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-030",
+      "text": "His middle head is now considering Buddhism.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-031",
+      "text": "Buddhism?! He guards the gates of Hell! You can't be Buddhist and work here!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-032",
+      "text": "He says he's 'finding inner peace through the chaos of eternal damnation.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-033",
+      "text": "And the right head?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-034",
+      "text": "Still angry. Very angry. Bit three sinners this morning just for fun.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-035",
+      "text": "At least ONE head is still on brand. Give that head a raise!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-036",
+      "text": "Okay, let's talk about the new hire. Satan Junior.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-037",
+      "text": "Ah yes, the boss's son. How's he doing?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-038",
+      "text": "He showed up on his first day wearing a Hawaiian shirt and flip-flops.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-039",
+      "text": "No.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-040",
+      "text": "Yes. And he brought a ukulele.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-041",
+      "text": "A UKULELE?! In Hell?!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-042",
+      "text": "He said he wanted to 'bring positive vibes to the workplace.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-043",
+      "text": "We're literally in the pit of eternal suffering! There are no positive vibes!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-044",
+      "text": "He played 'Somewhere Over the Rainbow' during the morning torture session. The demons were confused.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-045",
+      "text": "I bet! What did the sinners do?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-046",
+      "text": "They started crying. But like... happy crying? It was very unsettling.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-047",
+      "text": "This is a disaster. We need to have words with his father.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-048",
+      "text": "Good luck. Satan Senior is on vacation.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-049",
+      "text": "Vacation?! Where does the Lord of Darkness go on vacation?!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-050",
+      "text": "Florida.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-051",
+      "text": "That... actually makes sense.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-052",
+      "text": "Says he likes the 'authentic hellscape vibes' of the humidity.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-053",
+      "text": "Okay, what else is on the agenda? I need some good news.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-054",
+      "text": "The new torture methods testing went really well!",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-055",
+      "text": "Finally! What did we try?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-056",
+      "text": "An endless Zoom meeting. No agenda. Someone always has their mic on with background noise.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-057",
+      "text": "Diabolical! Pure evil! Who came up with this?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-058",
+      "text": "Dave from Marketing. He said he 'learned from the best' during his time on Earth.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-059",
+      "text": "Promote Dave immediately! What else do we have?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-060",
+      "text": "A printer that always says 'paper jam' but there's no paper jammed.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-061",
+      "text": "Classic! Timeless, even.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-062",
+      "text": "An app that takes exactly one second longer to load than your patience allows.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-063",
+      "text": "Ooh, that's subtle. I like it!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-064",
+      "text": "And my personal favorite: a group project where everyone 'totally did their part.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-065",
+      "text": "But nobody actually did anything?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-066",
+      "text": "Exactly! And the deadline is in five minutes. Forever.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-067",
+      "text": "That's beautiful. I'm actually getting emotional. These are works of art!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-068",
+      "text": "Speaking of art, the recreational committee has a request.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-069",
+      "text": "We have a recreational committee?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-070",
+      "text": "Yes. They want to start a company band.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-071",
+      "text": "What kind of band?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-072",
+      "text": "Death metal. Obviously.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-073",
+      "text": "That's actually perfect. Approved! What's the band name?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-074",
+      "text": "'Mandatory Fun.' Because attendance at practice is, well, mandatory.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-075",
+      "text": "I love the irony. What instruments do they have?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-076",
+      "text": "Three electric guitars, demonic drums, and... Satan Junior's ukulele.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-077",
+      "text": "No. No ukulele in death metal. That's where I draw the line!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-078",
+      "text": "He says it adds 'unexpected texture.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-079",
+      "text": "The only texture I want is PAIN! Pure, undiluted PAIN!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-080",
+      "text": "Okay, okay, calm down. Let's move to the weather report.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-081",
+      "text": "We have a weather report?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-082",
+      "text": "Yes. Today's forecast: eternal flames with a chance of brimstone. Tomorrow: more eternal flames. Next millennium: surprisingly mild eternal flames.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-083",
+      "text": "Wait, mild? What happened?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-084",
+      "text": "Budget cuts. Apparently, brimstone is expensive.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-085",
+      "text": "Budget cuts in HELL?! Who's responsible for this?!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-086",
+      "text": "Accounting. They said we need to 'trim the fat.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-087",
+      "text": "Trim the fat?! We're an eternal punishment facility, not a startup!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-088",
+      "text": "They also suggested we 'pivot to a more sustainable torture model.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-089",
+      "text": "What does that even mean?!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-090",
+      "text": "Renewable suffering. Solar-powered pitchforks. Carbon-neutral hellfire.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-091",
+      "text": "I hate this timeline.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-092",
+      "text": "On the bright side, the Employee of the Century award nominations are in!",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-093",
+      "text": "Oh! Who are the nominees?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-094",
+      "text": "First, there's Grimshaw from Eternal Torment. He's been here since the beginning. Very dedicated.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-095",
+      "text": "Solid choice. Who else?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-096",
+      "text": "Margaret from Accounting. She found a way to make spreadsheets 15 percent more soul-crushing.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-097",
+      "text": "Fifteen percent?! That's impressive even for Hell!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-098",
+      "text": "And finally, Dave from Marketing. He invented the Reply All email chain that never ends.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-099",
+      "text": "Dave is on fire lately! Figuratively and literally.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-100",
+      "text": "The voting starts next week. Make sure to cast your ballot in the lake of fire!",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-101",
+      "text": "Alright folks, we're running out of time. Any final announcements?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-102",
+      "text": "Yes! The annual 'Bring Your Demons to Work Day' has been rescheduled.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-103",
+      "text": "Why? What happened?",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-104",
+      "text": "Last year's incident. Someone's demon ate the HR handbook.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-105",
+      "text": "Honestly? That handbook was terrible. The demon did us a favor.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-106",
+      "text": "True. But we still need to rewrite it. Currently, it just says 'suffer' on every page.",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-107",
+      "text": "Concise. Effective. I don't see the problem.",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-108",
+      "text": "Heaven said it 'lacked nuance.'",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-109",
+      "text": "Ugh! Heaven again! Always with the constructive feedback!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-110",
+      "text": "Alright, that's all the time we have for this extended episode!",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-111",
+      "text": "Remember, if you're listening from down here, congratulations on your eternal subscription!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-112",
+      "text": "And if you're listening from up there... well...",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-113",
+      "text": "We'll be seeing you eventually! Everyone ends up here sooner or later!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-114",
+      "text": "Until next time, keep those fires burning!",
+      "voice": "en-Emma_woman"
+    },
+    {
+      "id": "seg-115",
+      "text": "And remember: HR stands for Hellish Resources! Stay damned, everyone!",
+      "voice": "de-Spk0_man"
+    },
+    {
+      "id": "seg-116",
+      "text": "Bye!",
+      "voice": "en-Emma_woman"
+    }
+  ],
+  "createdAt": "2025-12-14T20:44:00.000Z",
+  "version": "1.0.0"
+}

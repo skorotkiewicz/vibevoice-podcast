@@ -1,5 +1,4 @@
 import {
-  Check,
   Download,
   FileAudio,
   GripVertical,
@@ -7,7 +6,6 @@ import {
   Mic,
   Play,
   Plus,
-  RefreshCw,
   Square,
   Trash2,
   Upload,
@@ -15,6 +13,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useVibeVoice } from "@/hooks/useVibeVoice";
 
 const API_BASE = "http://localhost:8880/api";
 const SAMPLE_RATE = 24_000;
@@ -39,15 +38,6 @@ interface PodcastData {
   version: string;
 }
 
-// Cached audio for each segment (stored as ArrayBuffer for WAV data)
-interface SegmentAudioCache {
-  [segmentId: string]: {
-    audioData: ArrayBuffer;
-    text: string;
-    voice: string;
-  };
-}
-
 const languageNames: Record<string, string> = {
   en: "🇬🇧 English",
   de: "🇩🇪 German",
@@ -66,43 +56,71 @@ const languageNames: Record<string, string> = {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Generate audio for a single segment via /api/synthesize
- * Returns WAV audio data as ArrayBuffer
+ * Generate audio for a single segment via WebSocket
+ * Returns PCM16 audio data as Int16Array
  */
-async function synthesizeSegmentAudio(
+async function generateSegmentAudio(
   text: string,
   voice: string,
   onProgress?: (message: string) => void,
-): Promise<ArrayBuffer> {
-  onProgress?.("Generating...");
+): Promise<Int16Array> {
+  return new Promise((resolve, reject) => {
+    const chunks: ArrayBuffer[] = [];
 
-  const response = await fetch(`${API_BASE}/synthesize`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      text,
-      voice,
-      cfg_scale: 1.5,
-      inference_steps: 5,
-    }),
+    const baseUrl = API_BASE.replace(/^http/, "ws");
+    const wsUrl = new URL(`${baseUrl}/stream`);
+    wsUrl.searchParams.set("text", text);
+    wsUrl.searchParams.set("voice", voice);
+    wsUrl.searchParams.set("cfg", "1.5");
+    wsUrl.searchParams.set("steps", "5");
+
+    const ws = new WebSocket(wsUrl.toString());
+
+    ws.onopen = () => {
+      onProgress?.("Generating...");
+    };
+
+    ws.onmessage = (event) => {
+      if (event.data instanceof Blob) {
+        event.data.arrayBuffer().then((buffer) => {
+          chunks.push(buffer);
+        });
+      } else if (typeof event.data === "string") {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.event === "model_progress" && message.data) {
+            onProgress?.(`${message.data.generated_sec?.toFixed(1)}s generated`);
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    };
+
+    ws.onerror = () => {
+      reject(new Error("WebSocket connection error"));
+    };
+
+    ws.onclose = (event) => {
+      if (event.code === 1013) {
+        reject(new Error("Server is busy"));
+        return;
+      }
+
+      // Combine all chunks into a single Int16Array
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.byteLength, 0);
+      const combined = new Int16Array(totalLength / 2);
+      let offset = 0;
+
+      for (const chunk of chunks) {
+        const int16 = new Int16Array(chunk);
+        combined.set(int16, offset);
+        offset += int16.length;
+      }
+
+      resolve(combined);
+    };
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to synthesize audio: ${response.statusText}`);
-  }
-
-  onProgress?.("Done!");
-  return await response.arrayBuffer();
-}
-
-/**
- * Extract PCM16 data from WAV ArrayBuffer (skip 44-byte header)
- */
-function wavToPcm16(wavData: ArrayBuffer): Int16Array {
-  // WAV header is 44 bytes, PCM16 data follows
-  return new Int16Array(wavData, 44);
 }
 
 /**
@@ -127,8 +145,8 @@ function createWavFile(samples: Int16Array, sampleRate: number): Blob {
 
   // fmt chunk
   writeString(view, 12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
+  view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+  view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
@@ -162,7 +180,6 @@ function createSilence(durationMs: number): Int16Array {
 
 /**
  * Podcast Maker - Create multi-voice podcasts with TTS
- * This version uses /api/synthesize for pre-generating and caching audio
  */
 export function PodcastMaker() {
   const [segments, setSegments] = useState<PodcastSegment[]>([
@@ -181,26 +198,10 @@ export function PodcastMaker() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState<string>("");
 
-  // Audio cache - stores generated audio for each segment
-  const [audioCache, setAudioCache] = useState<SegmentAudioCache>({});
-  const [generatingSegmentId, setGeneratingSegmentId] = useState<string | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stopPlayAllRef = useRef(false);
   const stopExportRef = useRef(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
-
-  // Get or create AudioContext
-  const getAudioContext = useCallback(() => {
-    if (!audioContextRef.current || audioContextRef.current.state === "closed") {
-      audioContextRef.current = new AudioContext({ sampleRate: SAMPLE_RATE });
-    }
-    if (audioContextRef.current.state === "suspended") {
-      audioContextRef.current.resume();
-    }
-    return audioContextRef.current;
-  }, []);
+  const segmentPlayFunctionsRef = useRef<Map<string, () => Promise<void>>>(new Map());
 
   // Fetch available voices on mount
   useEffect(() => {
@@ -213,6 +214,7 @@ export function PodcastMaker() {
         }
       } catch (err) {
         console.error("Failed to fetch voices:", err);
+        // Default voices if API is unavailable
         setVoices([
           "en-Carter_man",
           "en-Davis_man",
@@ -251,109 +253,11 @@ export function PodcastMaker() {
   const removeSegment = (id: string) => {
     if (segments.length > 1) {
       setSegments(segments.filter((s) => s.id !== id));
-      // Remove from cache
-      setAudioCache((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
     }
   };
 
   const updateSegment = (id: string, field: keyof PodcastSegment, value: string) => {
     setSegments(segments.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
-    // Invalidate cache when text or voice changes
-    if (field === "text" || field === "voice") {
-      setAudioCache((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    }
-  };
-
-  // Check if segment audio is cached and valid
-  const isSegmentCached = (segment: PodcastSegment): boolean => {
-    const cached = audioCache[segment.id];
-    if (!cached) return false;
-    return cached.text === segment.text && cached.voice === segment.voice;
-  };
-
-  // Generate audio for a single segment
-  const generateSegmentAudio = async (segment: PodcastSegment) => {
-    if (!segment.text.trim()) return;
-
-    setGeneratingSegmentId(segment.id);
-    try {
-      const audioData = await synthesizeSegmentAudio(segment.text, segment.voice);
-      setAudioCache((prev) => ({
-        ...prev,
-        [segment.id]: {
-          audioData,
-          text: segment.text,
-          voice: segment.voice,
-        },
-      }));
-    } catch (err) {
-      console.error("Failed to generate audio:", err);
-      alert(`Failed to generate audio: ${err instanceof Error ? err.message : "Unknown error"}`);
-    } finally {
-      setGeneratingSegmentId(null);
-    }
-  };
-
-  // Generate all missing audio
-  const generateAllAudio = async () => {
-    const missingSegments = segments.filter((s) => s.text.trim() && !isSegmentCached(s));
-
-    for (const segment of missingSegments) {
-      if (stopExportRef.current) break;
-      await generateSegmentAudio(segment);
-      await delay(500); // Give server some breathing room
-    }
-  };
-
-  // Play audio from cache
-  const playAudioFromCache = async (segmentId: string): Promise<void> => {
-    const cached = audioCache[segmentId];
-    if (!cached) return;
-
-    const ctx = getAudioContext();
-    const pcmData = wavToPcm16(cached.audioData);
-
-    // Convert PCM16 to Float32
-    const float32Array = new Float32Array(pcmData.length);
-    for (let i = 0; i < pcmData.length; i++) {
-      float32Array[i] = pcmData[i] / 32768.0;
-    }
-
-    const audioBuffer = ctx.createBuffer(1, float32Array.length, SAMPLE_RATE);
-    audioBuffer.getChannelData(0).set(float32Array);
-
-    return new Promise((resolve) => {
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      currentSourceRef.current = source;
-
-      source.onended = () => {
-        currentSourceRef.current = null;
-        resolve();
-      };
-
-      source.start();
-    });
-  };
-
-  // Stop current playback
-  const stopPlayback = () => {
-    if (currentSourceRef.current) {
-      try {
-        currentSourceRef.current.stop();
-        currentSourceRef.current.disconnect();
-      } catch {}
-      currentSourceRef.current = null;
-    }
   };
 
   const exportPodcastJson = () => {
@@ -382,14 +286,14 @@ export function PodcastMaker() {
       try {
         const data: PodcastData = JSON.parse(e.target?.result as string);
         if (data.segments && Array.isArray(data.segments)) {
+          // Regenerate IDs to force fresh component instances with new hooks
+          // This ensures the voice from the imported JSON is used correctly
           setSegments(
             data.segments.map((s) => ({
               ...s,
               id: crypto.randomUUID(),
             })),
           );
-          // Clear audio cache for new import
-          setAudioCache({});
         }
       } catch (err) {
         console.error("Failed to parse podcast file:", err);
@@ -398,10 +302,21 @@ export function PodcastMaker() {
     };
     reader.readAsText(file);
 
+    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
+
+  // Register segment play function
+  const registerPlayFunction = useCallback((id: string, playFn: () => Promise<void>) => {
+    segmentPlayFunctionsRef.current.set(id, playFn);
+  }, []);
+
+  // Unregister segment play function
+  const unregisterPlayFunction = useCallback((id: string) => {
+    segmentPlayFunctionsRef.current.delete(id);
+  }, []);
 
   // Play all segments sequentially
   const handlePlayAll = async () => {
@@ -409,30 +324,30 @@ export function PodcastMaker() {
     stopPlayAllRef.current = false;
 
     for (let i = 0; i < segments.length; i++) {
-      if (stopPlayAllRef.current) break;
+      if (stopPlayAllRef.current) {
+        break;
+      }
 
       const segment = segments[i];
-      if (!segment.text.trim()) continue;
+      if (!segment.text.trim()) {
+        continue; // Skip empty segments
+      }
 
       setCurrentPlayingIndex(i);
       setPlayingSegmentId(segment.id);
 
-      try {
-        // Generate if not cached
-        if (!isSegmentCached(segment)) {
-          await generateSegmentAudio(segment);
+      const playFn = segmentPlayFunctionsRef.current.get(segment.id);
+      if (playFn) {
+        try {
+          await playFn();
+        } catch (err) {
+          console.error(`Failed to play segment ${i + 1}:`, err);
         }
-
-        // Play from cache
-        if (audioCache[segment.id] || isSegmentCached(segment)) {
-          await playAudioFromCache(segment.id);
-        }
-      } catch (err) {
-        console.error(`Failed to play segment ${i + 1}:`, err);
       }
 
+      // Wait a bit before starting next segment to ensure server is ready
       if (i < segments.length - 1 && !stopPlayAllRef.current) {
-        await delay(300);
+        await delay(2500);
       }
     }
 
@@ -443,7 +358,6 @@ export function PodcastMaker() {
 
   const handleStopAll = () => {
     stopPlayAllRef.current = true;
-    stopPlayback();
     setIsPlayingAll(false);
     setCurrentPlayingIndex(-1);
     setPlayingSegmentId(null);
@@ -461,7 +375,8 @@ export function PodcastMaker() {
     stopExportRef.current = false;
 
     const audioChunks: Int16Array[] = [];
-    const silenceBetweenSegments = createSilence(100);
+    // const silenceBetweenSegments = createSilence(500); // 500ms silence between segments
+    const silenceBetweenSegments = createSilence(1); // 500ms silence between segments
 
     try {
       for (let i = 0; i < validSegments.length; i++) {
@@ -472,39 +387,28 @@ export function PodcastMaker() {
         }
 
         const segment = validSegments[i];
+        setExportProgress(`Generating segment ${i + 1}/${validSegments.length}...`);
 
-        // Use cached audio if available, otherwise generate
-        let wavData: ArrayBuffer;
-        if (isSegmentCached(segment)) {
-          setExportProgress(`Using cached audio for segment ${i + 1}/${validSegments.length}`);
-          wavData = audioCache[segment.id].audioData;
-        } else {
-          setExportProgress(`Generating segment ${i + 1}/${validSegments.length}...`);
-          wavData = await synthesizeSegmentAudio(segment.text, segment.voice, (msg) =>
-            setExportProgress(`Segment ${i + 1}/${validSegments.length}: ${msg}`),
-          );
-          // Cache the newly generated audio
-          setAudioCache((prev) => ({
-            ...prev,
-            [segment.id]: {
-              audioData: wavData,
-              text: segment.text,
-              voice: segment.voice,
-            },
-          }));
-          await delay(500);
-        }
+        const audio = await generateSegmentAudio(segment.text, segment.voice, (msg) =>
+          setExportProgress(`Segment ${i + 1}/${validSegments.length}: ${msg}`),
+        );
 
-        const pcmData = wavToPcm16(wavData);
-        audioChunks.push(pcmData);
+        audioChunks.push(audio);
 
+        // Add silence between segments (but not after the last one)
         if (i < validSegments.length - 1) {
           audioChunks.push(silenceBetweenSegments);
+        }
+
+        // Wait a bit before next segment
+        if (i < validSegments.length - 1) {
+          await delay(500);
         }
       }
 
       setExportProgress("Creating audio file...");
 
+      // Combine all audio chunks
       const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
       const combined = new Int16Array(totalLength);
       let offset = 0;
@@ -514,6 +418,7 @@ export function PodcastMaker() {
         offset += chunk.length;
       }
 
+      // Create WAV file and download
       const wavBlob = createWavFile(combined, SAMPLE_RATE);
       const url = URL.createObjectURL(wavBlob);
       const a = document.createElement("a");
@@ -537,11 +442,7 @@ export function PodcastMaker() {
     stopExportRef.current = true;
   };
 
-  // Count cached segments
-  const cachedCount = segments.filter((s) => isSegmentCached(s)).length;
-  const validCount = segments.filter((s) => s.text.trim()).length;
-
-  const isBusy = isPlayingAll || isExporting || generatingSegmentId !== null;
+  const isBusy = isPlayingAll || isExporting;
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -572,25 +473,10 @@ export function PodcastMaker() {
 
             <span className="text-zinc-500 text-sm">
               {segments.length} segment{segments.length !== 1 ? "s" : ""}
-              {validCount > 0 && (
-                <span className="ml-2 text-teal-400">
-                  ({cachedCount}/{validCount} generated)
-                </span>
-              )}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={generateAllAudio}
-              disabled={isBusy || cachedCount === validCount}
-              className="flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-zinc-700 text-white disabled:text-zinc-500 rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Generate All
-            </button>
-
             <button
               type="button"
               onClick={exportPodcastJson}
@@ -647,34 +533,17 @@ export function PodcastMaker() {
               key={segment.id}
               segment={segment}
               index={index}
+              voices={voices}
               groupedVoices={groupedVoices}
               isLoadingVoices={isLoadingVoices}
-              isBusy={isBusy}
               isPlaying={playingSegmentId === segment.id}
-              isGenerating={generatingSegmentId === segment.id}
-              isCached={isSegmentCached(segment)}
+              isBusy={isBusy}
               canDelete={segments.length > 1}
               onUpdate={updateSegment}
               onRemove={removeSegment}
-              onGenerate={() => generateSegmentAudio(segment)}
-              onPlay={async () => {
-                if (!segment.text.trim()) return;
-                setPlayingSegmentId(segment.id);
-                try {
-                  if (!isSegmentCached(segment)) {
-                    await generateSegmentAudio(segment);
-                  }
-                  // Need to use updated cache
-                  await playAudioFromCache(segment.id);
-                } catch (err) {
-                  console.error("Failed to play:", err);
-                }
-                setPlayingSegmentId(null);
-              }}
-              onStop={() => {
-                stopPlayback();
-                setPlayingSegmentId(null);
-              }}
+              onPlayingChange={(playing) => setPlayingSegmentId(playing ? segment.id : null)}
+              registerPlayFunction={registerPlayFunction}
+              unregisterPlayFunction={unregisterPlayFunction}
             />
           ))}
         </div>
@@ -695,6 +564,7 @@ export function PodcastMaker() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Download Audio Button */}
               {!isPlayingAll && (
                 <button
                   type="button"
@@ -707,6 +577,7 @@ export function PodcastMaker() {
                 </button>
               )}
 
+              {/* Play/Stop Button */}
               {isPlayingAll ? (
                 <button
                   type="button"
@@ -741,35 +612,79 @@ export function PodcastMaker() {
 function SegmentCard({
   segment,
   index,
+  // voices,
   groupedVoices,
   isLoadingVoices,
+  // isPlaying,
   isBusy,
-  isPlaying,
-  isGenerating,
-  isCached,
   canDelete,
   onUpdate,
   onRemove,
-  onGenerate,
-  onPlay,
-  onStop,
+  onPlayingChange,
+  registerPlayFunction,
+  unregisterPlayFunction,
 }: {
   segment: PodcastSegment;
   index: number;
+  voices: string[];
   groupedVoices: Record<string, string[]>;
   isLoadingVoices: boolean;
-  isBusy: boolean;
   isPlaying: boolean;
-  isGenerating: boolean;
-  isCached: boolean;
+  isBusy: boolean;
   canDelete: boolean;
   onUpdate: (id: string, field: keyof PodcastSegment, value: string) => void;
   onRemove: (id: string) => void;
-  onGenerate: () => void;
-  onPlay: () => void;
-  onStop: () => void;
+  onPlayingChange: (playing: boolean) => void;
+  registerPlayFunction: (id: string, playFn: () => Promise<void>) => void;
+  unregisterPlayFunction: (id: string) => void;
 }) {
-  const isActive = isPlaying || isGenerating;
+  const { read, stop, isReading, isConnecting, error } = useVibeVoice(
+    { api: API_BASE },
+    { model: "microsoft/VibeVoice-Realtime-0.5B" },
+    { speaker_name: segment.voice },
+    { device: "cuda" },
+  );
+
+  // Create a play function that returns a promise
+  const playSegment = useCallback(async () => {
+    if (!segment.text.trim()) return;
+
+    try {
+      await read(segment.text, {
+        cfg_scale: 1.5,
+        inference_steps: 5,
+      });
+    } catch (err) {
+      console.error("Failed to read:", err);
+      throw err;
+    }
+  }, [segment.text, read]);
+
+  // Register this segment's play function with the parent
+  useEffect(() => {
+    registerPlayFunction(segment.id, playSegment);
+    return () => {
+      unregisterPlayFunction(segment.id);
+    };
+  }, [segment.id, playSegment, registerPlayFunction, unregisterPlayFunction]);
+
+  const handlePlay = async () => {
+    if (!segment.text.trim()) return;
+    onPlayingChange(true);
+    try {
+      await playSegment();
+    } catch (err) {
+      console.error("Failed to read:", err);
+    }
+    onPlayingChange(false);
+  };
+
+  const handleStop = () => {
+    stop();
+    onPlayingChange(false);
+  };
+
+  const isActive = isReading || isConnecting;
 
   return (
     <div
@@ -784,11 +699,7 @@ function SegmentCard({
 
       <div
         className={`absolute -left-0.5 top-1/2 -translate-y-1/2 w-1 h-12 rounded-full transition-colors ${
-          isActive
-            ? "bg-teal-500"
-            : isCached
-              ? "bg-green-500"
-              : "bg-zinc-700 group-hover:bg-zinc-600"
+          isActive ? "bg-teal-500" : "bg-zinc-700 group-hover:bg-zinc-600"
         }`}
       />
 
@@ -799,24 +710,16 @@ function SegmentCard({
             {index + 1}
           </span>
           <h3 className="text-white font-medium">Segment {index + 1}</h3>
-
-          {/* Status indicators */}
-          {isGenerating && (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-600/20 rounded-full">
-              <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
-              <span className="text-amber-300 text-xs font-medium">Generating...</span>
-            </span>
-          )}
-          {isPlaying && !isGenerating && (
+          {isActive && (
             <span className="flex items-center gap-1.5 px-2.5 py-1 bg-teal-600/20 rounded-full">
-              <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
-              <span className="text-teal-300 text-xs font-medium">Playing...</span>
-            </span>
-          )}
-          {isCached && !isActive && (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-green-600/20 rounded-full">
-              <Check className="w-3 h-3 text-green-400" />
-              <span className="text-green-300 text-xs font-medium">Ready</span>
+              {isConnecting ? (
+                <Loader2 className="w-3 h-3 text-teal-400 animate-spin" />
+              ) : (
+                <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
+              )}
+              <span className="text-teal-300 text-xs font-medium">
+                {isConnecting ? "Connecting..." : "Playing..."}
+              </span>
             </span>
           )}
         </div>
@@ -833,7 +736,7 @@ function SegmentCard({
         )}
       </div>
 
-      {/* Voice selector and action buttons */}
+      {/* Voice selector and play button */}
       <div className="flex items-center gap-3 mb-4">
         <div className="flex-1">
           <label className="block text-zinc-400 text-xs font-medium mb-1.5">Voice</label>
@@ -864,30 +767,10 @@ function SegmentCard({
           </select>
         </div>
 
-        {/* Generate button */}
-        <button
-          type="button"
-          onClick={onGenerate}
-          disabled={!segment.text.trim() || isBusy}
-          className={`mt-5 flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors disabled:cursor-not-allowed ${
-            isCached
-              ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
-              : "bg-amber-600 hover:bg-amber-500 disabled:bg-zinc-700 text-white disabled:text-zinc-500"
-          }`}
-        >
-          {isGenerating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-          {isCached ? "Regenerate" : "Generate"}
-        </button>
-
-        {/* Play/Stop button */}
-        {isPlaying ? (
+        {isActive ? (
           <button
             type="button"
-            onClick={onStop}
+            onClick={handleStop}
             className="mt-5 flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-colors"
           >
             <Square className="w-4 h-4" />
@@ -896,7 +779,7 @@ function SegmentCard({
         ) : (
           <button
             type="button"
-            onClick={onPlay}
+            onClick={handlePlay}
             disabled={!segment.text.trim() || isBusy}
             className="mt-5 flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-800/50 text-white disabled:text-zinc-600 rounded-lg font-medium transition-colors border border-zinc-700 disabled:cursor-not-allowed"
           >
@@ -918,6 +801,13 @@ function SegmentCard({
           className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 text-sm resize-none focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
+
+      {/* Error display */}
+      {error && !isBusy && (
+        <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <p className="text-red-300 text-sm">⚠️ {error}</p>
+        </div>
+      )}
     </div>
   );
 }
